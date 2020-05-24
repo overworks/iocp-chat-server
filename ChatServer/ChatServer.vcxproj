@@ -156,15 +156,22 @@
     <ClCompile Include="Client.cpp" />
     <ClCompile Include="IOCPServer.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="PacketManager.cpp" />
+    <ClCompile Include="Room.cpp" />
     <ClCompile Include="User.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ChatServer.h" />
     <ClInclude Include="Client.h" />
+    <ClInclude Include="ErrorCode.h" />
     <ClInclude Include="IOCPServer.h" />
     <ClInclude Include="Packet.h" />
+    <ClInclude Include="PacketManager.h" />
+    <ClInclude Include="Room.h" />
+    <ClInclude Include="RoomManager.h" />
     <ClInclude Include="Types.h" />
     <ClInclude Include="User.h" />
+    <ClInclude Include="UserManager.h" />
     <ClInclude Include="Utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

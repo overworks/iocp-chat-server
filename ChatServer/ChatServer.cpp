@@ -1,8 +1,14 @@
 ﻿#include "ChatServer.h"
+#include "PacketManager.h"
+
+ChatServer::ChatServer()
+{
+	m_packet_manager = new PacketManager();
+}
 
 ChatServer::~ChatServer()
 {
-
+	delete m_packet_manager;
 }
 
 bool

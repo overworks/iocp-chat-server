@@ -4,6 +4,10 @@
 
 #include "Types.h"
 
+#include <functional>
+
+using SendPacketFunc = std::function<void(uint32_t, uint32_t, const char*)>;
+
 enum class PacketID : Mh::u16
 {
 	None

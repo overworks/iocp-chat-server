@@ -1,10 +1,9 @@
 #pragma once
 
-#include "Packet.h"
 #include <unordered_map>
+#include "ErrorCode.h"
 
 class User;
-enum class ERROR_CODE;
 
 class Room
 {

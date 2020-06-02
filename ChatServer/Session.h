@@ -25,10 +25,10 @@ struct OverlappedEx : public OVERLAPPED
 
 constexpr size_t MAX_SOCK_RECVBUF = 256;
 
-class Client
+class Session
 {
 public:
-	Client(int index, HANDLE iocp_handle);
+	Session(int index, HANDLE iocp_handle);
 
 	int GetIndex() const { return m_index; }
 	SOCKET GetSocket() const { return m_socket; }

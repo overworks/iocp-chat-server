@@ -1,6 +1,5 @@
 #include "User.h"
 #include "Room.h"
-#include "ErrorCode.h"
 
 Room::Room(int number)
 	: m_number(number)

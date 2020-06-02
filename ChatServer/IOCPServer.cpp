@@ -2,7 +2,7 @@
 #include <chrono>
 #include <algorithm>
 #include "Utils.h"
-#include "Client.h"
+#include "Session.h"
 #include "IOCPServer.h"
 
 using namespace std::chrono;
@@ -20,7 +20,7 @@ IOCPServer::~IOCPServer()
 }
 
 bool
-IOCPServer::Init(Mh::u16 port, Mh::u32 concurrent_threads_count)
+IOCPServer::Init(Mh::u16 port, Mh::u32 concurrent_threads_count, Mh::u32 session_count)
 {
 	::WSADATA wsaData;
 
@@ -42,7 +42,7 @@ IOCPServer::Init(Mh::u16 port, Mh::u32 concurrent_threads_count)
 
 	m_concurrent_threads_count = concurrent_threads_count;
 
-	if (!OnInit())
+	if (!OnInit(session_count))
 	{
 		return false;
 	}
@@ -75,6 +75,12 @@ IOCPServer::Shutdown()
 	CloseListenSocket();
 
 	::WSACleanup();
+}
+
+void
+IOCPServer::SendMsg(int session_index, Mh::u32 length, const char * data)
+{
+	GetClient(session_index)->SendMsg(length, data);
 }
 
 bool IOCPServer::InitListenSocket(Mh::u16 port)
@@ -151,7 +157,7 @@ IOCPServer::CreateClientList(Mh::u32 client_count)
 	
 	for (auto i = 0u; i < client_count; ++i)
 	{
-		m_clients.push_back(new Client(static_cast<int>(i), m_iocp_handle));
+		m_clients.push_back(new Session(static_cast<int>(i), m_iocp_handle));
 	}
 }
 
@@ -229,7 +235,7 @@ IOCPServer::AccepterThreadProcess()
 void
 IOCPServer::WorkerThreadProcess()
 {
-	Client* client;
+	Session* client;
 	BOOL succeeded;
 	DWORD num_transfered;
 	LPOVERLAPPED overlapped;
@@ -306,7 +312,7 @@ IOCPServer::FinalizeCommonThreads()
 }
 
 void
-IOCPServer::CloseSocket(Client * client, bool force)
+IOCPServer::CloseSocket(Session * client, bool force)
 {
 	if (client->IsConnected())
 	{

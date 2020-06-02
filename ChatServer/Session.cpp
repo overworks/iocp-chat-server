@@ -1,13 +1,13 @@
 #define NOMINMAX
 
-#include "Client.h"
+#include "Session.h"
 #include <iostream>
 #include <mswsock.h>
 #include <ws2tcpip.h>
 
 using namespace std::chrono;
 
-Client::Client(int index, HANDLE iocp_handle)
+Session::Session(int index, HANDLE iocp_handle)
 	: m_index(index)
 	, m_iocp_handle(iocp_handle)
 	, m_socket(INVALID_SOCKET)
@@ -16,7 +16,7 @@ Client::Client(int index, HANDLE iocp_handle)
 }
 
 bool
-Client::PostAccept(SOCKET listen_socket)
+Session::PostAccept(SOCKET listen_socket)
 {
 	std::cout << "[PostAccept] index - " << GetIndex() << std::endl;
 
@@ -49,7 +49,7 @@ Client::PostAccept(SOCKET listen_socket)
 }
 
 bool
-Client::AcceptCompletion()
+Session::AcceptCompletion()
 {
 	std::cout << "AcceptCompletion - SessionIndex: " << GetIndex() << std::endl;
 
@@ -67,12 +67,12 @@ Client::AcceptCompletion()
 	return true;
 }
 
-void Client::Clear()
+void Session::Clear()
 {
 }
 
 void
-Client::Close(bool force)
+Session::Close(bool force)
 {
 	linger stLinger = { 0, 0 };	// SO_DONTLINGER로 설정
 
@@ -97,7 +97,7 @@ Client::Close(bool force)
 }
 
 void
-Client::SendMsg(size_t data_size, const char * msg)
+Session::SendMsg(size_t data_size, const char * msg)
 {
 	OverlappedEx* overlapped_ex = new OverlappedEx();
 	memset(overlapped_ex, 0, sizeof(OverlappedEx));
@@ -118,7 +118,7 @@ Client::SendMsg(size_t data_size, const char * msg)
 }
 
 void
-Client::OnSendCompleted(size_t data_size)
+Session::OnSendCompleted(size_t data_size)
 {
 	std::cout << u8"[송신 완료] bytes : " << data_size << std::endl;
 
@@ -140,7 +140,7 @@ Client::OnSendCompleted(size_t data_size)
 }
 
 bool
-Client::BindRecv()
+Session::BindRecv()
 {
 	DWORD dwFlag = 0;
 	DWORD dwRecvNumBytes = 0;
@@ -169,7 +169,7 @@ Client::BindRecv()
 }
 
 bool
-Client::OnConnect()
+Session::OnConnect()
 {
 	m_connected = true;
 
@@ -183,7 +183,7 @@ Client::OnConnect()
 	return BindRecv();
 }
 
-bool Client::BindIOCopmpletion()
+bool Session::BindIOCopmpletion()
 {
 	//socket과 pClientInfo를 CompletionPort객체와 연결시킨다.
 	auto hIOCP = ::CreateIoCompletionPort(reinterpret_cast<HANDLE>(m_socket),
@@ -198,7 +198,7 @@ bool Client::BindIOCopmpletion()
 }
 
 bool
-Client::SendIO()
+Session::SendIO()
 {
 	auto overlapped_ex = m_send_data_queue.front();
 

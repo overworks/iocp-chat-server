@@ -11,7 +11,7 @@ public:
 	virtual ~ChatServer();
 
 protected:
-	virtual bool OnInit() override;
+	virtual bool OnInit(size_t session_count) override;
 	virtual bool OnRun() override;
 	virtual void OnShutdown() override;
 

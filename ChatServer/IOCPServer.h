@@ -10,7 +10,7 @@
 #include <winsock2.h>
 #include "Types.h"
 
-class Client;
+class Session;
 
 class IOCPServer
 {
@@ -18,12 +18,12 @@ public:
 	IOCPServer();
 	virtual ~IOCPServer();
 
-	bool Init(Mh::u16 port, Mh::u32 concurrent_threads_count);
+	bool Init(Mh::u16 port, Mh::u32 concurrent_threads_count, Mh::u32 session_count);
 	bool Run(Mh::u32 client_count);
 	void Shutdown();
 
 protected:
-	virtual bool OnInit() = 0;
+	virtual bool OnInit(size_t session_count) = 0;
 	virtual bool OnRun() = 0;
 	virtual void OnShutdown() = 0;
 
@@ -32,7 +32,9 @@ protected:
 	virtual void OnClose(int index) = 0;
 
 	Mh::u32 GetConcurrentThreadsCount() const { return m_concurrent_threads_count; }
-	Client* GetClient(int index) { return m_clients[index]; }
+	Session* GetClient(int index) { return m_clients[index]; }
+
+	void SendMsg(int session_index, Mh::u32 length, const char* data);
 
 private:
 	bool InitListenSocket(Mh::u16 port);
@@ -49,7 +51,7 @@ private:
 	void WorkerThreadProcess();
 	void FinalizeCommonThreads();
 
-	void CloseSocket(Client* client, bool force = false);
+	void CloseSocket(Session* client, bool force = false);
 
 private:
 	Mh::u32 m_concurrent_threads_count;
@@ -57,7 +59,7 @@ private:
 	SOCKET m_listen_socket;
 	HANDLE m_iocp_handle;
 
-	std::vector<Client*> m_clients;
+	std::vector<Session*> m_clients;
 
 	bool m_accepter_running;
 	std::thread m_accepter_thread;

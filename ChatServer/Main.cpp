@@ -13,7 +13,7 @@ int main()
 	ChatServer server;
 
 	//소켓을 초기화
-	server.Init(SERVER_PORT, MAX_IO_WORKER_THREAD);
+	server.Init(SERVER_PORT, MAX_IO_WORKER_THREAD, MAX_CLIENT);
 
 	server.Run(MAX_CLIENT);
 

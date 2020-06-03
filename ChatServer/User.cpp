@@ -66,7 +66,8 @@ User::SetPacketData(size_t data_size, const char* data)
 	m_buffer_write_pos += data_size;
 }
 
-PacketInfoPtr User::GetPacket()
+PacketInfoPtr
+User::GetPacket()
 {
 	auto unsended_bytes = m_buffer_write_pos - m_buffer_read_pos;
 	if (unsended_bytes < PACKET_HEADER_LENGTH)
@@ -81,6 +82,7 @@ PacketInfoPtr User::GetPacket()
 	}
 
 	PacketInfoPtr packet = std::make_shared<PacketInfo>();
+	packet->session_index = m_index;
 	packet->packet_id = header->packet_id;
 	packet->length = header->length;
 	packet->data = m_buffer + m_buffer_read_pos;

@@ -29,7 +29,7 @@ public:
 	void Run();
 	void Stop();
 
-	void ReceivePacketData(int session_index, Mh::u32 data_size, const char* data);
+	void ReceivePacketData(int session_index, size_t data_size, const char* data);
 	void PushSystemPacket(const PacketInfoPtr& packet);
 
 private:
@@ -46,13 +46,13 @@ private:
 	void ProcessPacket();
 	void ProcessRecvPacket(Mh::u32 session_index, PacketID packet_id, Mh::u16 packet_size, const char* packet_data);
 
-	void ProcessUserConnect(Mh::u32 session_index, Mh::u16 packet_size, const char* packet);
-	void ProcessUserDisconnect(Mh::u32 session_index, Mh::u16 packet_size, const char* packet);
+	void ProcessUserConnect(Mh::u32 session_index, Mh::u16 packet_size, const char* packet_data);
+	void ProcessUserDisconnect(Mh::u32 session_index, Mh::u16 packet_size, const char* packet_data);
 
-	void ProcessLogin(Mh::u32 session_index, Mh::u16 packet_size, const char* packet);
-	void ProcessEnterRoom(Mh::u32 session_index, Mh::u16 packet_size, const char* packet);
-	void ProcessLeaveRoom(Mh::u32 session_index, Mh::u16 packet_size, const char* packet);
-	void ProcessChatMessage(Mh::u32 session_index, Mh::u16 packet_size, const char* packet);
+	void ProcessLogin(Mh::u32 session_index, Mh::u16 packet_size, const char* packet_data);
+	void ProcessEnterRoom(Mh::u32 session_index, Mh::u16 packet_size, const char* packet_data);
+	void ProcessLeaveRoom(Mh::u32 session_index, Mh::u16 packet_size, const char* packet_data);
+	void ProcessChatMessage(Mh::u32 session_index, Mh::u16 packet_size, const char* packet_data);
 
 private:
 	typedef void(PacketManager::*PacketFunc)(uint32_t, uint16_t, const char*);

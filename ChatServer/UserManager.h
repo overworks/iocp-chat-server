@@ -23,6 +23,8 @@ public:
 
 	User* GetUserByConnIdx(int client_index);
 
+	bool IsFull() const;
+
 private:
 	std::vector<User*> m_user_pool;
 	std::unordered_map<std::string, int> m_user_id_table;

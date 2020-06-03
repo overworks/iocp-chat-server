@@ -28,8 +28,8 @@ protected:
 	virtual void OnShutdown() = 0;
 
 	virtual void OnConnect(int index) = 0;
-	virtual void OnReceive(int index, size_t data_size, const char* data) = 0;
 	virtual void OnClose(int index) = 0;
+	virtual void OnReceive(int index, size_t data_size, const char* data) = 0;
 
 	Mh::u32 GetConcurrentThreadsCount() const { return m_concurrent_threads_count; }
 	Session* GetClient(int index) { return m_clients[index]; }

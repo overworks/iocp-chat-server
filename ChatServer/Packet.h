@@ -44,11 +44,12 @@ using PacketInfoPtr = std::shared_ptr<PacketInfo>;
 
 struct PacketHeader
 {
-	PacketID packet_id;
 	Mh::u16 length;
-
+	PacketID packet_id;
+	Mh::u8 type;
+	
 	PacketHeader() {}
-	PacketHeader(PacketID packet_Id, Mh::u16 length)
+	PacketHeader(PacketID packet_id, Mh::u16 length)
 		: packet_id(packet_id)
 		, length(length)
 	{}
@@ -62,11 +63,11 @@ constexpr int MAX_USER_PW_LEN = 32;
 
 struct PacketLoginReq : public PacketHeader
 {
-	char user_id[MAX_USER_ID_LEN];
-	char password[MAX_USER_PW_LEN];
+	char user_id[MAX_USER_ID_LEN + 1];
+	char password[MAX_USER_PW_LEN + 1];
 
 	PacketLoginReq()
-		: PacketHeader(PacketID::LOGIN_REQUEST, sizeof(decltype(*this)))
+		: PacketHeader(PacketID::LOGIN_REQUEST, sizeof(*this))
 	{}
 };
 
@@ -75,7 +76,11 @@ struct PacketLoginRes : public PacketHeader
 	ERROR_CODE result;
 
 	PacketLoginRes()
-		: PacketHeader(PacketID::LOGIN_RESPONSE, sizeof(decltype(*this)))
+		: PacketLoginRes(ERROR_CODE::NONE)
+	{}
+
+	PacketLoginRes(ERROR_CODE result)
+		: PacketHeader(PacketID::LOGIN_RESPONSE, sizeof(*this)), result(result)
 	{}
 };
 
@@ -86,7 +91,7 @@ struct PacketRoomEnterReq : public PacketHeader
 	Mh::s16 room_number;
 
 	PacketRoomEnterReq()
-		: PacketHeader(PacketID::ROOM_ENTER_REQUEST, sizeof(decltype(*this)))
+		: PacketHeader(PacketID::ROOM_ENTER_REQUEST, sizeof(*this))
 	{}
 };
 
@@ -94,8 +99,13 @@ struct PacketRoomEnterRes : public PacketHeader
 {
 	ERROR_CODE result;
 
+	
 	PacketRoomEnterRes()
-		: PacketHeader(PacketID::ROOM_ENTER_RESPONSE, sizeof(decltype(*this)))
+		: PacketRoomEnterRes(ERROR_CODE::NONE)
+	{}
+
+	PacketRoomEnterRes(ERROR_CODE result = ERROR_CODE::NONE)
+		: PacketHeader(PacketID::ROOM_ENTER_RESPONSE, sizeof(*this)), result(result)
 	{}
 };
 
@@ -104,7 +114,7 @@ struct PacketRoomEnterRes : public PacketHeader
 struct PacketRoomLeaveReq : public PacketHeader
 {
 	PacketRoomLeaveReq()
-		: PacketHeader(PacketID::ROOM_LEAVE_REQUEST, sizeof(decltype(*this)))
+		: PacketHeader(PacketID::ROOM_LEAVE_REQUEST, sizeof(*this))
 	{}
 };
 
@@ -113,7 +123,11 @@ struct PacketRoomLeaveRes : public PacketHeader
 	ERROR_CODE result;
 
 	PacketRoomLeaveRes()
-		: PacketHeader(PacketID::ROOM_LEAVE_RESPONSE, sizeof(decltype(*this)))
+		: PacketRoomLeaveRes(ERROR_CODE::NONE)
+	{}
+
+	PacketRoomLeaveRes(ERROR_CODE result)
+		: PacketHeader(PacketID::ROOM_LEAVE_RESPONSE, sizeof(*this)), result(result)
 	{}
 };
 
@@ -126,7 +140,7 @@ struct PacketRoomChatReq : public PacketHeader
 	char message[MAX_CHAT_MSG_SIZE + 1] = { 0, };
 
 	PacketRoomChatReq()
-		: PacketHeader(PacketID::ROOM_CHAT_REQUEST, sizeof(decltype(*this)))
+		: PacketHeader(PacketID::ROOM_CHAT_REQUEST, sizeof(*this))
 	{}
 };
 
@@ -135,7 +149,11 @@ struct PacketRoomChatRes : public PacketHeader
 	ERROR_CODE result;
 
 	PacketRoomChatRes()
-		: PacketHeader(PacketID::ROOM_CHAT_RESPONSE, sizeof(decltype(*this)))
+		: PacketRoomChatRes(ERROR_CODE::NONE)
+	{}
+
+	PacketRoomChatRes(ERROR_CODE result)
+		: PacketHeader(PacketID::ROOM_CHAT_RESPONSE, sizeof(*this)), result(result)
 	{}
 };
 
@@ -145,8 +163,15 @@ struct PacketRoomNotify : public PacketHeader
 	char message[MAX_CHAT_MSG_SIZE + 1] = { 0, };
 
 	PacketRoomNotify()
-		: PacketHeader(PacketID::ROOM_CHAT_NOTIFY, sizeof(decltype(*this)))
+		: PacketHeader(PacketID::ROOM_CHAT_NOTIFY, sizeof(*this))
 	{}
+
+	PacketRoomNotify(const char* user_id, const char* message)
+		: PacketHeader(PacketID::ROOM_CHAT_NOTIFY, sizeof(*this))
+	{
+		std::copy(user_id, user_id + sizeof(this->user_id), this->user_id);
+		std::copy(message, message + sizeof(this->message), this->message);
+	}
 };
 
 #pragma pack(pop)

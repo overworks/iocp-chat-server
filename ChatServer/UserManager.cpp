@@ -63,3 +63,9 @@ UserManager::GetUserByConnIdx(int client_index)
 	}
 	return m_user_pool[static_cast<size_t>(client_index)];
 }
+
+bool
+UserManager::IsFull() const
+{
+	return m_user_id_table.size() >= m_user_pool.size();
+}

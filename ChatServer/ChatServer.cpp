@@ -1,4 +1,5 @@
-﻿#include "ChatServer.h"
+﻿#include <iostream>
+#include "ChatServer.h"
 #include "PacketManager.h"
 
 ChatServer::ChatServer()
@@ -38,17 +39,32 @@ ChatServer::OnShutdown()
 void
 ChatServer::OnConnect(int index)
 {
+	std::cout << "[OnConnect] session index: " << index << std::endl;
 
-}
+	auto packet = std::make_shared<PacketInfo>();
+	packet->session_index = index;
+	packet->packet_id = PacketID::SYS_USER_CONNECT;
 
-void
-ChatServer::OnReceive(int index, size_t data_size, const char* data)
-{
-
+	m_packet_manager->PushSystemPacket(packet);
 }
 
 void
 ChatServer::OnClose(int index)
 {
+	std::cout << "[OnClose] session index: " << index << std::endl;
 
+	auto packet = std::make_shared<PacketInfo>();
+	packet->session_index = index;
+	packet->packet_id = PacketID::SYS_USER_DISCONNECT;
+	
+	m_packet_manager->PushSystemPacket(packet);
 }
+
+void
+ChatServer::OnReceive(int index, size_t data_size, const char* data)
+{
+	std::cout << "[OnReceive] session index: " << index << std::endl;
+
+	m_packet_manager->ReceivePacketData(index, data_size, data);
+}
+

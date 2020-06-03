@@ -1,6 +1,7 @@
 #include "Packet.h"
 #include "User.h"
 #include "UserManager.h"
+#include "Room.h"
 #include "RoomManager.h"
 #include "PacketManager.h"
 #include "Utils.h"
@@ -23,6 +24,8 @@ void PacketManager::Init(size_t count, PacketManager::SendPacketFunc send_func)
 
 	m_user_manager->Init(count);
 	m_room_manager->Init(count, MaxRoomCount, BeginRoomNumber);
+
+	RegisterPacket();
 }
 
 void PacketManager::Run()
@@ -38,7 +41,7 @@ void PacketManager::Stop()
 }
 
 void
-PacketManager::ReceivePacketData(int session_index, Mh::u32 data_size, const char * data)
+PacketManager::ReceivePacketData(int session_index, size_t data_size, const char * data)
 {
 	auto user = m_user_manager->GetUserByConnIdx(session_index);
 	user->SetPacketData(data_size, data);
@@ -125,7 +128,7 @@ PacketManager::DequeueUserPacket()
 	int session_index;
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
-		if (!m_incoming_packet_user_queue.empty())
+		if (m_incoming_packet_user_queue.empty())
 		{
 			return nullptr;
 		}
@@ -136,7 +139,6 @@ PacketManager::DequeueUserPacket()
 
 	auto user = m_user_manager->GetUserByConnIdx(session_index);
 	auto packet = user->GetPacket();
-	packet->session_index = session_index;
 
 	return packet;
 }
@@ -152,14 +154,14 @@ PacketManager::ProcessPacket()
 		auto packet = DequeueUserPacket();
 		if (packet != nullptr && packet->packet_id > PacketID::SYS_END)
 		{
-			idle = true;
+			idle = false;
 			ProcessRecvPacket(packet->session_index, packet->packet_id, packet->length, packet->data);
 		}
 
 		packet = DequeueSystemPacket();
 		if (packet != nullptr && packet->packet_id != PacketID::NONE)
 		{
-			idle = true;
+			idle = false;
 			ProcessRecvPacket(packet->session_index, packet->packet_id, packet->length, packet->data);
 		}
 
@@ -205,20 +207,134 @@ PacketManager::ProcessLogin(Mh::u32 session_index, Mh::u16 packet_size, const ch
 	std::string user_id(req_packet->user_id);
 	std::cout << "requested user id = " << user_id << std::endl;
 
-	PacketLoginRes packet_res;
+	if (m_user_manager->IsFull())
+	{
+		//접속자수가 최대수를 차지해서 접속불가
+		PacketLoginRes res_packet(ERROR_CODE::LOGIN_USER_USED_ALL_OBJ);
+		m_send_func(session_index, res_packet.length, reinterpret_cast<const char*>(&res_packet));
+		return;
+	}
+
+	if (m_user_manager->FindUserIndexByID(user_id) != -1)
+	{
+		//접속중인 유저여서 실패를 반환한다.
+		PacketLoginRes res_packet(ERROR_CODE::LOGIN_USER_ALREADY);
+		m_send_func(session_index, res_packet.length, reinterpret_cast<const char*>(&res_packet));
+		return;
+	}
+	else
+	{
+		m_user_manager->AddUser(user_id, static_cast<int>(session_index));
+
+		PacketLoginRes res_packet(ERROR_CODE::NONE);
+		m_send_func(session_index, res_packet.length, reinterpret_cast<const char*>(&res_packet));
+
+		std::cout << "Log In success - " << std::endl;
+		/*RedisLoginReq dbReq;
+		memcpy(dbReq.UserID, pLoginReqPacket->UserID, (MAX_USER_ID_LEN + 1));
+		memcpy(dbReq.UserPW, pLoginReqPacket->UserPW, (MAX_USER_PW_LEN + 1));
+
+		RedisTaskPtr task = std::make_shared<RedisTask>();
+		task->UserIndex = clientIndex;
+		task->TaskID = RedisTaskID::REQUEST_LOGIN;
+		task->DataSize = sizeof(RedisLoginReq);
+		task->pData = new char[task->DataSize];
+		memcpy(task->pData, &dbReq, task->DataSize);
+		mRedisMgr->PushRequest(task);
+
+		mUserManager->AddUser(userID, static_cast<int>(clientIndex));
+
+		std::cout << "Login To Redis user id = " << userID << std::endl;*/
+	}
 }
 
 void
-PacketManager::ProcessEnterRoom(Mh::u32 session_index, Mh::u16 packet_size, const char * packet)
+PacketManager::ProcessEnterRoom(Mh::u32 session_index, Mh::u16 packet_size, const char * packet_data)
 {
+	std::cout << "[ProcessEnterRoom] session_index: " << session_index << std::endl;
+
+	auto user = m_user_manager->GetUserByConnIdx(session_index);
+	if (!user)
+	{
+		return;
+	}
+
+	auto req_packet = reinterpret_cast<const PacketRoomEnterReq*>(packet_data);
+	ERROR_CODE result = m_room_manager->EnterUser(req_packet->room_number, user);
+	PacketRoomEnterRes res_packet(result);
+	m_send_func(session_index, res_packet.length, reinterpret_cast<const char*>(&res_packet));
 }
 
 void
-PacketManager::ProcessLeaveRoom(Mh::u32 session_index, Mh::u16 packet_size, const char * packet)
+PacketManager::ProcessLeaveRoom(Mh::u32 session_index, Mh::u16 packet_size, const char * packet_data)
 {
+	std::cout << "[ProcessLeaveRoom] session_index: " << session_index << std::endl;
+
+	auto user = m_user_manager->GetUserByConnIdx(session_index);
+	if (!user)
+	{
+		return;
+	}
+
+	auto req_packet = reinterpret_cast<const PacketRoomLeaveReq*>(packet_data);
+	ERROR_CODE result = m_room_manager->LeaveUser(user);
+	
+	//TODO Room안의 UserList객체의 값 확인하기
+	PacketRoomLeaveRes res_packet(result);
+	m_send_func(session_index, res_packet.length, reinterpret_cast<const char*>(&res_packet));
 }
 
 void
-PacketManager::ProcessChatMessage(Mh::u32 session_index, Mh::u16 packet_size, const char * packet)
+PacketManager::ProcessChatMessage(Mh::u32 session_index, Mh::u16 packet_size, const char * packet_data)
 {
+	std::cout << "[ProcessChatMessage] session_index: " << session_index << std::endl;
+
+	User* user = m_user_manager->GetUserByConnIdx(session_index);
+	if (!user)
+	{
+		std::cerr << "Invalid session index - " << session_index << std::endl;
+		
+		return;
+	}
+
+	int room_number = user->GetRoomNumber();
+	if (room_number == -1)
+	{
+		std::cerr << "Invalid room number - " << room_number << std::endl;
+		PacketRoomChatRes res_packet(ERROR_CODE::CHAT_ROOM_INVALID_ROOM_NUMBER);
+		return;
+	}
+
+	Room* room = m_room_manager->GetRoom(room_number);
+	if (!room)
+	{
+		std::cerr << "Invalid room number - " << room_number << std::endl;
+		PacketRoomChatRes res_packet(ERROR_CODE::CHAT_ROOM_INVALID_ROOM_NUMBER);
+		return;
+	}
+
+	auto req_packet = reinterpret_cast<const PacketRoomChatReq*>(packet_data);
+	
+	PacketRoomChatRes res_packet(ERROR_CODE::NONE);
+	m_send_func(session_index, res_packet.length, reinterpret_cast<const char*>(&res_packet));
+
+	// 방안의 사람에게 전달.
+	PacketRoomNotify notify_packet(user->GetUserID().c_str(), req_packet->message);
+	
+	auto user_table = room->GetUserTable();
+	for (auto iter : user_table)
+	{
+		auto dest_user = iter.second;
+		if (!dest_user)
+		{
+			continue;
+		}
+
+		if (dest_user->GetIndex() == session_index)
+		{
+			continue;
+		}
+
+		m_send_func(dest_user->GetIndex(), notify_packet.length, reinterpret_cast<const char*>(&notify_packet));
+	}
 }
